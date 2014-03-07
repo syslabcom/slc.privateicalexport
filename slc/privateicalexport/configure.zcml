@@ -10,13 +10,22 @@
   <!-- Include configuration for dependencies listed in setup.py -->
   <includeDependencies package="." />
 
+  <plone:behavior
+      title="Name from brand and model"
+      description="generates a name from brand and model attributes"
+      for="plone.dexterity.interfaces.IDexterityContent"
+      provides=".behaviors.INameFromUUID"
+      />
+
+  <adapter factory=".behaviors.NameFromUUID" />
+
   <!-- Register an extension profile to make the product installable
        in Plone -->
   <genericsetup:registerProfile
       name="default"
-      title="Provide a random URL to expose a private iCal feed"
+      title="slc.privateicalexport"
       directory="profiles/default"
-      description="Extension profile for Provide a random URL to expose a private iCal feed"
+      description="Provide a random URL to expose a private iCal feed"
       provides="Products.GenericSetup.interfaces.EXTENSION"
       />
 

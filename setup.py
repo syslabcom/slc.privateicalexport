@@ -7,17 +7,17 @@ setup(
     name='slc.privateicalexport',
     version=version,
     description="Provide a random URL to expose a private iCal feed",
-    long_description=open("README.txt").read() + "\n" +
-    open(os.path.join("docs", "HISTORY.txt")).read(),
+    long_description=open("README.rst").read() + "\n" +
+    open(os.path.join("docs", "HISTORY.rst")).read(),
     classifiers=[
         "Framework :: Plone",
         "Programming Language :: Python",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    keywords='',
-    author='',
-    author_email='',
-    url='',
+    keywords='icalendar',
+    author='Cillian de Róiste',
+    author_email='deroiste@syslab.com',
+    url='https://github.com/syslabcom/slc.privateicalexport',
     license='GPL',
     packages=find_packages(exclude=['ez_setup']),
     namespace_packages=['slc'],
@@ -25,7 +25,6 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-        'elementtree',
         'plone.api',
         'plone.app.dexterity',
         'plone.namedfile [blobs]',
