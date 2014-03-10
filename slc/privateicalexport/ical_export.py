@@ -1,55 +1,86 @@
 
-from z3c.form import group, field
-from zope import schema
-from zope.interface import invariant, Invalid
-from zope.schema.interfaces import IContextSourceBinder
-from zope.schema.vocabulary import SimpleVocabulary, SimpleTerm
-
-from plone.dexterity.content import Item
-
-from plone.app.textfield import RichText
-from plone.namedfile.field import NamedImage, NamedFile
-from plone.namedfile.field import NamedBlobImage, NamedBlobFile
-from plone.namedfile.interfaces import IImageScaleTraversable
-
-from plone.supermodel import model
 from Products.Five import BrowserView
-
-from slc.privateicalexport import MessageFactory as _
-
-
-# Interface class; used to define content-type schema.
-
-class IiCalExport(model.Schema, IImageScaleTraversable):
-    """
-    Export a private iCal feed
-    """
-
-    # If you want a schema-defined interface, delete the model.load
-    # line below and delete the matching file in the models sub-directory.
-    # If you want a model-based interface, edit
-    # models/ical_export.xml to define the content type.
-
-    model.load("models/ical_export.xml")
+from plone.dexterity.content import Item
+from plone.supermodel import model
+from zope import schema
+from plone import api
+from icalendar import Calendar
+from icalendar import Event
+from datetime import datetime
 
 
-# Custom content-type class; objects created for this content type will
-# be instances of this class. Use this class to add content-type specific
-# methods and properties. Put methods that are mainly useful for rendering
-# in separate view classes.
+class IiCalExport(model.Schema):
+    """ Export a private iCal feed """
+    calendars = schema.List(
+        title=u'calendars',
+        value_type=schema.TextLine(),
+        required=False,
+    )
+
 
 class iCalExport(Item):
-
-    # Add your class methods and properties here
     pass
 
 
-# View class
-# The view is configured in configure.zcml. Edit there to change
-# its public name. Unless changed, the view will be available
-# TTW at content/@@sampleview
+class IcsView(BrowserView):
 
-class SampleView(BrowserView):
-    """ sample view class """
+    PRODID = "-//Plone.org//NONSGML slc.privateicalexport//EN"
+    VERSION = "2.0"
 
-    # Add view methods here
+    def get_events(self, user=None, calendars=None):
+        pc = api.portal.get_tool("portal_catalog")
+        events = pc.searchResults(portal_type="Event")
+        return events
+
+    def ical_date(self, date):
+        dt = datetime(
+            date.year(),
+            date.month(),
+            date.day(),
+            date.hour(),
+            date.minute(),
+        )
+        return dt.strftime("%Y%m%dT%H%M%S")
+
+    def __call__(self):
+        context = self.context
+        user = context.Creator()
+        calendars = context.calendars
+
+        events = self.get_events(user=user, calendars=calendars)
+        ical = Calendar()
+        ical.add("prodid", self.PRODID)
+        ical.add("version", self.VERSION)
+        for event in events:
+            ievent = Event()
+            tz = event.get("timezone", None)
+            ievent["uid"] = "{0}-{1}@{2}".format(
+                event.UID,
+                event.ModificationDate,
+                self.request.SERVER_NAME,
+            )
+            if tz:
+                start_key = "dtstart;tzid={0}".format(tz)
+                end_key = "dtend;tzid={0}".format(tz)
+                ievent[start_key] = self.ical_date(event.start)
+                ievent[end_key] = self.ical_date(event.start)
+            else:
+                ievent["dtstart"] = self.ical_date(event.start)
+                ievent["dtend"] = self.ical_date(event.end)
+            ievent["summary"] = event.Title
+            if event.Description:
+                ievent["description"] = event.Description
+            if event.location:
+                ievent["location"] = event.location
+            if hasattr(event, "attendees"):
+                for attendee in event.attendees:
+                    ievent.add("attendee", attendee)
+            ical.add_component(ievent)
+
+        name = '%s.ics' % self.context.getId()
+        self.request.RESPONSE.setHeader('Content-Type', 'text/calendar')
+        self.request.RESPONSE.setHeader(
+            'Content-Disposition',
+            'attachment; filename="%s"' % name
+        )
+        self.request.RESPONSE.write(ical.to_ical())

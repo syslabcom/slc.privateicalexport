@@ -19,8 +19,13 @@
 
   <adapter factory=".behaviors.NameFromUUID" />
 
-  <!-- Register an extension profile to make the product installable
-       in Plone -->
+  <browser:view
+      for=".ical_export.IiCalExport"
+      name="ics"
+      permission="zope2.Public"
+      class=".ical_export.IcsView"
+      />
+
   <genericsetup:registerProfile
       name="default"
       title="slc.privateicalexport"
